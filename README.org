@@ -1,0 +1,7 @@
+
+  | esp | variable   |
+  |  +8 | path       |
+  |  -4 | filehandle |
+  |  -8 | pathlen    |
+  | -12 | bufferlen  |
+  | -16 | buffer     |
