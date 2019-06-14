@@ -15,23 +15,26 @@ includelib c:\masm32\lib\user32.lib
 includelib c:\masm32\lib\msvcrt.lib
 
 .DATA
-;;; variables initialisees
+;;; variables globales initialisees
 dot		db	".",0
 dotdot		db	"..",0
 formatpath	db	"\*",0
-defaultpath	db	"C:\*",0,0
+formatpathunix	db	"/*",0	
 defaultprint	db	"%s",10,0
-rawprint	db	"%s",0
 errorprint	db	"Error message : %d !",10,0
+accessdenied	db	"Access Denied !",10,0
 endCommand	db	"Pause",13,10,0
-depthprint	db	"	",0
-depth		dword	0	
-debug		db 	"%d",10,0
-
+depthprint	db	"  | ",0
+depth		dword	0
+debug		db	"%d",10,0
+getpath		db	"%255s"
+welcome		db	"Please enter a valid path (less than 255 characters and ends with '\*' or '/*').",10,"--> ",0
+	
 .DATA?
-;;; variables non-initialisees (bss)
-filedata		WIN32_FIND_DATA <>
-
+;;; variables globales non-initialisees (bss)
+filedata	WIN32_FIND_DATA <>
+path		db		256 dup (?)
+	
 .CODE
 canbeexplored PROC
 ;;; int canbeexplored(char* file)
@@ -66,55 +69,127 @@ endifisdotdot:
 
 	;; return 1
 	mov eax,1
+
 endcanbeexplored:
 	mov esp, ebp
 	pop ebp
 	ret
 canbeexplored ENDP
 
+isavalidsearch PROC
+;;; void isavalidsearch(char* path)
+	push ebp
+	mov ebp, esp
+
+	;; int end
+	sub esp, 4
+	
+	;; end = strlen(path) - 2
+	push [ebp+8]
+	call crt_strlen
+	add esp, 4
+	sub eax, 2
+	mov [ebp-4], eax
+	
+	;; if (strcmp(path[end], formatpath)==0)
+	add eax, [ebp+8]
+	push eax
+	push offset formatpath
+	call crt_strcmp
+	add esp, 8
+	cmp eax, 0
+	jne isnotthegoodformat
+	;; return 1
+	mov eax, 1
+	jmp endisavalidsearch
+isnotthegoodformat:
+
+	;; if (strcmp(path[end], formatpathunix)==0)
+	mov eax, [ebp-4]
+	add eax, [ebp+8]
+	push eax
+	push offset formatpathunix
+	call crt_strcmp
+	add esp, 8
+	cmp eax, 0
+	jne isnotthegoodformatunix
+	;; return 1
+	mov eax, 1
+	jmp endisavalidsearch
+isnotthegoodformatunix:
+	
+	;; return 0
+	mov eax, 0
+endisavalidsearch:
+	mov esp, ebp
+	pop ebp
+	ret
+isavalidsearch ENDP
+
+	
 dispLastError PROC
 ;;; void dispLastError()
 	push ebp
 	mov ebp, esp
-
-	call GetLastError
-	push eax
-
-	cmp eax, 18
-	je enddisplasterror
 	
+	;; int i = GetLastError()
+	;; if( i == 18)
+	call GetLastError
+	cmp eax, 18
+	;; return
+	je enddisplasterror
+
+	;; printdepth()
+	call printdepth
+	
+	;; if (i == 5)
+	;; printf (accessdenied)
+	push offset accessdenied
+	call crt_printf
+	add esp, 4
+	;; return
+	je enddisplasterror
+
+	;; printf(errorprint, i)
+	push eax
 	push offset errorprint
 	call crt_printf
 	add esp,8
 
-enddisplasterror:	
-	
+enddisplasterror:
 	mov esp, ebp
 	pop ebp
 	ret
 dispLastError ENDP
 
 printdepth PROC
+;;; void printdepth()
 	push ebp
 	mov ebp, esp
 
+	;; int i = depth
 	mov ebx, depth
+
+	;; while (i != 0)
 whiledepth:
 	cmp ebx,0
 	je endwhiledepth
+
+	;; printf(depthprint)
 	push offset depthprint
-	push offset rawprint
 	call crt_printf
-	add esp, 8
+	add esp, 4
+
+	;; i--
 	dec ebx
 	jmp whiledepth
-endwhiledepth:	
-	
+endwhiledepth:
+
 	mov esp, ebp
 	pop ebp
 	ret
-printdepth ENDP	
-	
+printdepth ENDP
+
 dir PROC
 ;;; void dir(char* path)
 	push ebp
@@ -146,7 +221,7 @@ iffindfirstnoerror:
 
 	;; do {...} while (FindNextFile(findhandle, filedata) != 0)
 whilethereisanextfile:
-	;; printdepth
+	;; printdepth()
 	call printdepth
 	;; printf(defaultprint, filedata.cFileName)
 	push offset filedata.cFileName
@@ -154,11 +229,12 @@ whilethereisanextfile:
 	call crt_printf
 	add esp,8
 
-	;; if (filedata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY
-	;; && canbeexplored(filedata.cFilename))
+	;; if (filedata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != FILE_ATTRIBUTE_DIRECTORY
+	;; || !canbeexplored(filedata.cFilename))
+	;; continue
 	mov eax, filedata.dwFileAttributes
 	and eax, FILE_ATTRIBUTE_DIRECTORY
-	cmp eax, FILE_ATTRIBUTE_DIRECTORY	
+	cmp eax, FILE_ATTRIBUTE_DIRECTORY
 	je ifisadirectory
 	jmp continuewhile
 ifisadirectory:
@@ -169,7 +245,7 @@ ifisadirectory:
 	je ifcanbeexplored
 	jmp continuewhile
 ifcanbeexplored:
-	
+
 	;; pathlen = strlen(path)
 	push dword ptr[ebp+8]
 	call crt_strlen
@@ -225,7 +301,7 @@ ifcanbeexplored:
 	push [ebp-16]
 	call crt_strcat
 	add esp,8
-	
+
 	;; strcat(buffer, formatpath)
 	push offset formatpath
 	push [ebp-16]
@@ -234,7 +310,7 @@ ifcanbeexplored:
 
 	;; depth++
 	inc depth
-	
+
 	;; dir(buffer)
 	push [ebp-16]
 	call dir
@@ -253,7 +329,7 @@ ifcanbeexplored:
 	add eax, [ebp-12]
 	add esp, eax
 continuewhile:
-	
+
 	;; if (FindNextFile(findhandle, filedata) == 0)
 	push offset filedata
 	push [ebp-4]
@@ -271,7 +347,7 @@ iffindnextnoerror:
 	jmp whilethereisanextfile
 
 enddir:
-	;; return void
+
 	mov esp, ebp
 	pop ebp
 	ret
@@ -279,11 +355,32 @@ dir ENDP
 
 start:
 ;;; void entrypoint()
-	;; dir(defaultpath)
-	push offset defaultpath
+
+	;; printf(welcome)
+	push offset welcome
+	call crt_printf
+	add esp,4
+	
+	;; scanf(getpath, path)
+	push offset path
+	push offset getpath
+	call crt_scanf
+	add esp, 8
+
+	;; if( isavalidsearch(path) )
+	push offset path
+	call isavalidsearch
+	add esp, 4
+	cmp eax, 0
+	je isnotavalidpath
+	
+	;; dir(path)
+	push offset path
 	call dir
 	add esp, 4
 
+isnotavalidpath:	
+	
 	;; Ending the program nicely
 	invoke crt_system, offset endCommand
 	mov eax, 0
