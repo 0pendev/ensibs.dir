@@ -1,1 +1,1 @@
-.\dir.exe | sls "Error message" -ca
+echo "./DEBUG/*" | .\dir.exe | sls "Error message" -ca

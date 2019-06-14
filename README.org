@@ -5,3 +5,7 @@
   |  -8 | pathlen    |
   | -12 | bufferlen  |
   | -16 | buffer     |
+
+#+BEGIN_SRC text
+
+#+END_SRC
