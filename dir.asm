@@ -127,8 +127,8 @@ endisavalidsearch:
 isavalidsearch ENDP
 
 	
-dispLastError PROC
-;;; void dispLastError()
+displasterror PROC
+;;; void displasterror()
 	push ebp
 	mov ebp, esp
 	
@@ -160,7 +160,7 @@ enddisplasterror:
 	mov esp, ebp
 	pop ebp
 	ret
-dispLastError ENDP
+displasterror ENDP
 
 printdepth PROC
 ;;; void printdepth()
@@ -207,9 +207,9 @@ dir PROC
 	;; if (findhandle == INVALID_HANDLE_VALUE)
 	cmp dword ptr [ebp-4], INVALID_HANDLE_VALUE
 	jne iffindfirstnoerror
-	;; dispLastError(findhandle)
+	;; displasterror(findhandle)
 	push dword ptr [ebp-4]
-	call dispLastError
+	call displasterror
 	add esp,4
 	;; return
 	jmp enddir
@@ -219,7 +219,7 @@ iffindfirstnoerror:
 	;; char* buffer
 	sub esp, 12
 
-	;; do {...} while (FindNextFile(findhandle, filedata) != 0)
+	;; do {...}
 whilethereisanextfile:
 	;; printdepth()
 	call printdepth
@@ -330,24 +330,19 @@ ifcanbeexplored:
 	add esp, eax
 continuewhile:
 
-	;; if (FindNextFile(findhandle, filedata) == 0)
+	;; {...} while (FindNextFile(findhandle, filedata) != 0)
 	push offset filedata
 	push [ebp-4]
 	call FindNextFile
 	cmp eax, 0
-	jne iffindnextnoerror
-	;; dispLastError(findhandle)
-	push dword ptr [ebp-4]
-	call dispLastError
-	add esp,4
-	;; return
-	jmp enddir
-iffindnextnoerror:
+	jne whilethereisanextfile
 
-	jmp whilethereisanextfile
+	;; displasterror(findhandle)
+	push dword ptr [ebp-4]
+	call displasterror
+	add esp,4
 
 enddir:
-
 	mov esp, ebp
 	pop ebp
 	ret

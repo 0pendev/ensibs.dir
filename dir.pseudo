@@ -1,0 +1,84 @@
+char* dot = "."
+char* dotdot = ".."
+char* formatpath = "\*"
+char* formatpathunix = "/*"
+char* defaultprint = "%s\n"
+char* errorprint = "Error message : %d !\n"
+char* accessdenied = "Access Denied !\n"
+char* depthprint = "  | "
+int   depth = 0
+char* debug = "%d\n"
+char* getpath = "%255s"
+char* welcome = "Please enter a valid path (less than 255 characters and ends with '\*' or '/*').\n--> "
+
+WIN32_FIND_DATA filedata
+char path[256]
+
+int canbeexplored(char* file)
+	 if (strcmp(file, dot) == 0)
+		 return 0
+	 if (strcmp(file, dotdot) == 0)
+		 return 0
+	 return 1
+	 
+void isavalidsearch(char* path)
+	 int end
+	 end = strlen(path) - 2
+	 if (strcmp(path[end], formatpath)==0)
+		 return 1
+	 if (strcmp(path[end], formatpathunix)==0)
+		 return 1
+	 return 0
+	 
+void displasterror()
+	 int i = GetLastError()
+	 if( i == 18)
+		 return
+	 printdepth()
+	 if (i == 5)
+		 printf(accessdenied)
+		 return
+	 printf(errorprint, i)
+
+void printdepth()
+	 int i = depth
+	 while (i != 0)
+	 	 printf(depthprint)
+	 	 i--
+
+void dir(char* path)
+	 HANDLE filehandle
+	 findhandle = FindFirstFile(path, filedata)
+	 if (findhandle == INVALID_HANDLE_VALUE)
+	 	 displasterror(findhandle)
+	 	 return
+	 int pathlen, bufferlen
+	 char* buffer
+	 do 
+	 	 printdepth()
+	 	 printf(defaultprint, filedata.cFileName)
+	 	 if (filedata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != FILE_ATTRIBUTE_DIRECTORY
+	 	 || !canbeexplored(filedata.cFilename))
+	 	 	 continue
+	 	 pathlen = strlen(path)
+	 	 bufferlen = pathlen
+	 	 bufferlen += strlen(filedata.cFileName)
+	 	 bufferlen += 3
+	 	 buffer = malloc(8 * (bufferlen + (4 - (bufferlen % 4))))
+	 	 strncpy(buffer, path, pathlen-1)
+	 	 buffer[pathlen] = \0
+	 	 strcat(buffer, filedata.cFileName)
+	 	 strcat(buffer, formatpath)
+	 	 depth++
+	 	 dir(buffer)
+	 	 depth--
+	 	 free(buffer)
+	 while (FindNextFile(findhandle, filedata) != 0)
+	 displasterror(findhandle)
+	 
+void entrypoint()
+	 printf(welcome)
+	 scanf(getpath, path)
+	 if( isavalidsearch(path) )
+	 dir(path)
+	 return 0
