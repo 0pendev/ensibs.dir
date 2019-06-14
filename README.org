@@ -1,11 +1,151 @@
 
-  | esp | variable   |
-  |  +8 | path       |
-  |  -4 | filehandle |
-  |  -8 | pathlen    |
-  | -12 | bufferlen  |
-  | -16 | buffer     |
+* Objectif
+* Bases de la programmation 32 bits
+** Les types
+** Variables locales
+** Appels de procédures
+** Sauts conditionnels
+** Structure d'un programme
+* Pseudo code de notre programme dir
+* Implémentation
+** global scope
+*** pseudo code
+    #+BEGIN_SRC text
+    
+    #+END_SRC
+*** Implémentation
+    #+BEGIN_SRC asm
+    
+    #+END_SRC
+** canbeexplored
+*** pseudo code
+    #+BEGIN_SRC text
+    
+    #+END_SRC
+*** transcriptions des variables
 
-#+BEGIN_SRC text
+    |-----+------------|
+    | esp | variable   |
+    |-----+------------|
+    |  +8 | path       |
+    |  -4 | filehandle |
+    |  -8 | pathlen    |
+    | -12 | bufferlen  |
+    | -16 | buffer     |
+    |-----+------------|
 
-#+END_SRC
+*** Implémentation
+    #+BEGIN_SRC asm
+    
+    #+END_SRC
+** isavalidsearch
+*** pseudo code
+    #+BEGIN_SRC text
+    
+    #+END_SRC
+*** transcriptions des variables
+
+    |-----+------------|
+    | esp | variable   |
+    |-----+------------|
+    |  +8 | path       |
+    |  -4 | filehandle |
+    |  -8 | pathlen    |
+    | -12 | bufferlen  |
+    | -16 | buffer     |
+    |-----+------------|
+
+*** Implémentation
+    #+BEGIN_SRC asm
+    
+    #+END_SRC
+** displasterror
+*** pseudo code
+    #+BEGIN_SRC text
+    
+    #+END_SRC
+*** transcriptions des variables
+
+    |-----+------------|
+    | esp | variable   |
+    |-----+------------|
+    |  +8 | path       |
+    |  -4 | filehandle |
+    |  -8 | pathlen    |
+    | -12 | bufferlen  |
+    | -16 | buffer     |
+    |-----+------------|
+
+*** Implémentation
+    #+BEGIN_SRC asm
+    
+    #+END_SRC
+    
+** printdepth
+*** pseudo code
+    #+BEGIN_SRC text
+    
+    #+END_SRC
+*** transcriptions des variables
+
+    |-----+------------|
+    | esp | variable   |
+    |-----+------------|
+    |  +8 | path       |
+    |  -4 | filehandle |
+    |  -8 | pathlen    |
+    | -12 | bufferlen  |
+    | -16 | buffer     |
+    |-----+------------|
+
+*** Implémentation
+    #+BEGIN_SRC asm
+    
+    #+END_SRC
+** dir
+*** pseudo code
+    #+BEGIN_SRC text
+    
+    #+END_SRC
+*** transcriptions des variables
+    
+    |-----+------------|
+    | esp | variable   |
+    |-----+------------|
+    |  +8 | path       |
+    |  -4 | filehandle |
+    |  -8 | pathlen    |
+    | -12 | bufferlen  |
+    | -16 | buffer     |
+    |-----+------------|
+
+*** Implémentation
+    #+BEGIN_SRC asm
+    
+    #+END_SRC
+** entrypoint
+*** pseudo code
+    #+BEGIN_SRC text
+    
+    #+END_SRC
+*** transcriptions des variables
+
+    |-----+------------|
+    | esp | variable   |
+    |-----+------------|
+    |  +8 | path       |
+    |  -4 | filehandle |
+    |  -8 | pathlen    |
+    | -12 | bufferlen  |
+    | -16 | buffer     |
+    |-----+------------|
+
+*** Implémentation
+    #+BEGIN_SRC asm
+    
+    #+END_SRC
+
+* Utilisation du programme
+  #+BEGIN_SRC shell
+  
+  #+END_SRC
