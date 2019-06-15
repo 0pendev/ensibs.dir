@@ -7,7 +7,6 @@ char* errorprint = "Error message : %d !\n"
 char* accessdenied = "Access Denied !\n"
 char* depthprint = "  | "
 int   depth = 0
-char* debug = "%d\n"
 char* getpath = "%255s"
 char* welcome = "Please enter a valid path (less than 255 characters and ends with '\*' or '/*').\n--> "
 

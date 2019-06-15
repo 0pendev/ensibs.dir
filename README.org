@@ -2,8 +2,12 @@
 #+AUTHOR: Francisco FREITAS
 
 * Objectif
-  Le but de se projet est de coder en assembleur MASM 32 bits un programme qui émule la commande 'dir' de windows.
-  Le programme est écrit dans le fichier dir.asm et peut être compilé à l'aide de la commande ./make.bat/.
+  Le but de se projet est de coder en assembleur MASM 32 bits un
+  programme qui émule la commande 'dir' de windows.
+
+
+  Le programme est écrit dans le fichier dir.asm et peut être compilé
+  à l'aide de la commande ./make.bat afin de créé dir.exe.
 
 * Bases de la programmation 32 bits
 ** Les types
@@ -11,21 +15,82 @@
 ** Appels de procédures
 ** Sauts conditionnels
 ** Structure d'un programme
-* Pseudo code de notre programme dir
+* Présentation de la suite du document
+  Pour aider au développement du programme chaque fonction a été
+  développé en pseudo-c. Ce pseudo code reprend les types, les
+  opérateurs du C et les librairies standards sans garder des
+  lourdeurs de syntaxe comme les /'{}'/ ou les /';'/.
+
+
+  Pour chaque fonctionnalité, on explique son utilisation, on donne
+  son pseudo-code, la transcription des variables en assembleur, le
+  code assembleur et des spécificités retrouvées durant le
+  développement.
+
 * Implémentation
 ** global scope
+   Il a été choisi d'avoir des ressources globales dans notre
+   programme : des chaines de caractère, une structure...
 *** pseudo code
     #+BEGIN_SRC text
-    
+      char* dot = "."
+      char* dotdot = ".."
+      char* formatpath = "\*"
+      char* formatpathunix = "/*"
+      char* defaultprint = "%s\n"
+      char* errorprint = "Error message : %d !\n"
+      char* accessdenied = "Access Denied !\n"
+      char* depthprint = "  | "
+      int   depth = 0
+      char* getpath = "%255s"
+      char* welcome = "Please enter a valid path (less than 255 characters and ends with '\*' or '/*').\n--> "
+
+      WIN32_FIND_DATA filedata
+      char path[256]
     #+END_SRC
+*** Description des variables
+    | Variable       | Description                                                         |
+    | dot            | Utilisé pour vérifier la nature d'un fichier                        |
+    | dotdot         | Utilisé pour vérifier la nature d'un fichier                        |
+    | formatpath     | Format par défaut utilisé à la fin des chemins                      |
+    | formatpahtunix | Format par défaut compatible avec l'écriture en '\'                 |
+    | defaultprint   | Affichage par défaut utilisé                                        |
+    | errorprint     | Affichage utilisé pour afficher un code d'erreur                    |
+    | accessdenied   | Affiche un message d'erreur en cas d'accès refusé                   |
+    | depthprint     | Décallage de l'affichage pour simuler le parcours en profondeur     |
+    | depth          | Stock dans une variable globale la profondeur de recherche actuelle |
+
 *** Implémentation
     #+BEGIN_SRC asm
-    
+      .DATA
+      ;;; variables globales initialisees
+      dot		db	".",0
+      dotdot		db	"..",0
+      formatpath	db	"\*",0
+      formatpathunix	db	"/*",0
+      defaultprint	db	"%s",10,0
+      errorprint	db	"Error message : %d !",10,0
+      accessdenied	db	"Access Denied !",10,0
+      endCommand	db	"Pause",13,10,0
+      depthprint	db	"  | ",0
+      depth		dword	0
+      getpath		db	"%255s"
+      welcome		db	"Please enter a valid path (less than 255 characters and ends with '\*' or '/*').",10,"--> ",0
+
+      .DATA?
+      ;;; variables globales non-initialisees (bss)
+      filedata	WIN32_FIND_DATA <>
+      path		db		256 dup (?)
     #+END_SRC
 ** canbeexplored
 *** pseudo code
     #+BEGIN_SRC text
-    
+      int canbeexplored(char* file)
+	       if (strcmp(file, dot) == 0)
+		       return 0
+	       if (strcmp(file, dotdot) == 0)
+		       return 0
+	       return 1
     #+END_SRC
 *** transcriptions des variables
 
@@ -41,12 +106,57 @@
 
 *** Implémentation
     #+BEGIN_SRC asm
-    
+      canbeexplored PROC
+      ;;; int canbeexplored(char* file)
+	      push ebp
+	      mov ebp, esp
+
+	      ;; if (strcmp(file, dot) == 0)
+	      push offset dot
+	      push dword ptr[ebp+8]
+	      call crt_strcmp
+	      add esp, 8
+	      cmp eax, 0
+	      jne endifisdot
+
+	      ;; return 0
+	      mov eax,0
+	      jmp endcanbeexplored
+      endifisdot:
+
+	      ;; if (strcmp(file, dotdot) == 0)
+	      push  offset dotdot
+	      push dword ptr[ebp+8]
+	      call crt_strcmp
+	      add esp, 8
+	      cmp eax, 0
+	      jne endifisdotdot
+
+	      ;; return 0
+	      mov eax,0
+	      jmp endcanbeexplored
+      endifisdotdot:
+
+	      ;; return 1
+	      mov eax,1
+
+      endcanbeexplored:
+	      mov esp, ebp
+	      pop ebp
+	      ret
+      canbeexplored ENDP
     #+END_SRC
 ** isavalidsearch
 *** pseudo code
     #+BEGIN_SRC text
-    
+      void isavalidsearch(char* path)
+	       int end
+	       end = strlen(path) - 2
+	       if (strcmp(path[end], formatpath)==0)
+		       return 1
+	       if (strcmp(path[end], formatpathunix)==0)
+		       return 1
+	       return 0
     #+END_SRC
 *** transcriptions des variables
 
@@ -62,12 +172,68 @@
 
 *** Implémentation
     #+BEGIN_SRC asm
-    
+      isavalidsearch PROC
+      ;;; void isavalidsearch(char* path)
+	      push ebp
+	      mov ebp, esp
+
+	      ;; int end
+	      sub esp, 4
+
+	      ;; end = strlen(path) - 2
+	      push [ebp+8]
+	      call crt_strlen
+	      add esp, 4
+	      sub eax, 2
+	      mov [ebp-4], eax
+
+	      ;; if (strcmp(path[end], formatpath)==0)
+	      add eax, [ebp+8]
+	      push eax
+	      push offset formatpath
+	      call crt_strcmp
+	      add esp, 8
+	      cmp eax, 0
+	      jne isnotthegoodformat
+	      ;; return 1
+	      mov eax, 1
+	      jmp endisavalidsearch
+      isnotthegoodformat:
+
+	      ;; if (strcmp(path[end], formatpathunix)==0)
+	      mov eax, [ebp-4]
+	      add eax, [ebp+8]
+	      push eax
+	      push offset formatpathunix
+	      call crt_strcmp
+	      add esp, 8
+	      cmp eax, 0
+	      jne isnotthegoodformatunix
+	      ;; return 1
+	      mov eax, 1
+	      jmp endisavalidsearch
+      isnotthegoodformatunix:
+
+	      ;; return 0
+	      mov eax, 0
+      endisavalidsearch:
+	      mov esp, ebp
+	      pop ebp
+	      ret
+      isavalidsearch ENDP
     #+END_SRC
 ** displasterror
 *** pseudo code
     #+BEGIN_SRC text
-    
+      void displasterror()
+	       int i = GetLastError()
+	       if( i == 18)
+		       return
+	       printdepth()
+	       if (i == 5)
+		       printf(accessdenied)
+		       return
+	       printf(errorprint, i)
     #+END_SRC
 *** transcriptions des variables
 
@@ -83,13 +249,50 @@
 
 *** Implémentation
     #+BEGIN_SRC asm
-    
+      displasterror PROC
+      ;;; void displasterror()
+	      push ebp
+	      mov ebp, esp
+
+	      ;; int i = GetLastError()
+	      ;; if( i == 18)
+	      call GetLastError
+	      cmp eax, 18
+	      ;; return
+	      je enddisplasterror
+
+	      ;; printdepth()
+	      call printdepth
+
+	      ;; if (i == 5)
+	      ;; printf (accessdenied)
+	      push offset accessdenied
+	      call crt_printf
+	      add esp, 4
+	      ;; return
+	      je enddisplasterror
+
+	      ;; printf(errorprint, i)
+	      push eax
+	      push offset errorprint
+	      call crt_printf
+	      add esp,8
+
+      enddisplasterror:
+	      mov esp, ebp
+	      pop ebp
+	      ret
+      displasterror ENDP
     #+END_SRC
-    
+
 ** printdepth
 *** pseudo code
     #+BEGIN_SRC text
-    
+      void printdepth()
+	       int i = depth
+	       while (i != 0)
+		       printf(depthprint)
+		       i--
     #+END_SRC
 *** transcriptions des variables
 
@@ -105,15 +308,69 @@
 
 *** Implémentation
     #+BEGIN_SRC asm
-    
+      printdepth PROC
+      ;;; void printdepth()
+	      push ebp
+	      mov ebp, esp
+
+	      ;; int i = depth
+	      mov ebx, depth
+
+	      ;; while (i != 0)
+      whiledepth:
+	      cmp ebx,0
+	      je endwhiledepth
+
+	      ;; printf(depthprint)
+	      push offset depthprint
+	      call crt_printf
+	      add esp, 4
+
+	      ;; i--
+	      dec ebx
+	      jmp whiledepth
+      endwhiledepth:
+
+	      mov esp, ebp
+	      pop ebp
+	      ret
+      printdepth ENDP
     #+END_SRC
 ** dir
 *** pseudo code
     #+BEGIN_SRC text
-    
+      void dir(char* path)
+	       HANDLE filehandle
+	       findhandle = FindFirstFile(path, filedata)
+	       if (findhandle == INVALID_HANDLE_VALUE)
+		       displasterror(findhandle)
+		       return
+	       int pathlen, bufferlen
+	       char* buffer
+	       do
+		       printdepth()
+		       printf(defaultprint, filedata.cFileName)
+		       if (filedata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != FILE_ATTRIBUTE_DIRECTORY
+		       || !canbeexplored(filedata.cFilename))
+			       continue
+		       pathlen = strlen(path)
+		       bufferlen = pathlen
+		       bufferlen += strlen(filedata.cFileName)
+		       bufferlen += 3
+		       buffer = malloc(8 * (bufferlen + (4 - (bufferlen % 4))))
+		       strncpy(buffer, path, pathlen-1)
+		       buffer[pathlen] = \0
+		       strcat(buffer, filedata.cFileName)
+		       strcat(buffer, formatpath)
+		       depth++
+		       dir(buffer)
+		       depth--
+		       free(buffer)
+	       while (FindNextFile(findhandle, filedata) != 0)
+	       displasterror(findhandle)
     #+END_SRC
 *** transcriptions des variables
-    
+
     |-----+------------|
     | esp | variable   |
     |-----+------------|
@@ -126,12 +383,173 @@
 
 *** Implémentation
     #+BEGIN_SRC asm
-    
+      dir PROC
+      ;;; void dir(char* path)
+	      push ebp
+	      mov ebp, esp
+
+	      ;; HANDLE filehandle
+	      sub esp, 4
+
+	      ;; findhandle = FindFirstFile(path, filedata)
+	      push offset filedata
+	      push dword ptr [ebp+8]
+	      call FindFirstFile
+	      mov [ebp-4], eax
+
+	      ;; if (findhandle == INVALID_HANDLE_VALUE)
+	      cmp dword ptr [ebp-4], INVALID_HANDLE_VALUE
+	      jne iffindfirstnoerror
+	      ;; displasterror(findhandle)
+	      push dword ptr [ebp-4]
+	      call displasterror
+	      add esp,4
+	      ;; return
+	      jmp enddir
+      iffindfirstnoerror:
+
+	      ;; int pathlen, bufferlen
+	      ;; char* buffer
+	      sub esp, 12
+
+	      ;; do {...}
+      whilethereisanextfile:
+	      ;; printdepth()
+	      call printdepth
+	      ;; printf(defaultprint, filedata.cFileName)
+	      push offset filedata.cFileName
+	      push offset defaultprint
+	      call crt_printf
+	      add esp,8
+
+	      ;; if (filedata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY != FILE_ATTRIBUTE_DIRECTORY
+	      ;; || !canbeexplored(filedata.cFilename))
+	      ;; continue
+	      mov eax, filedata.dwFileAttributes
+	      and eax, FILE_ATTRIBUTE_DIRECTORY
+	      cmp eax, FILE_ATTRIBUTE_DIRECTORY
+	      je ifisadirectory
+	      jmp continuewhile
+      ifisadirectory:
+	      push offset filedata.cFileName
+	      call canbeexplored
+	      add esp, 4
+	      cmp eax, 1
+	      je ifcanbeexplored
+	      jmp continuewhile
+      ifcanbeexplored:
+
+	      ;; pathlen = strlen(path)
+	      push dword ptr[ebp+8]
+	      call crt_strlen
+	      add esp,4
+	      mov [ebp-8], eax
+
+	      ;; bufferlen = pathlen
+	      mov eax, [ebp-8]
+	      mov [ebp-12], eax
+
+	      ;; bufferlen += strlen(filedata.cFileName)
+	      push offset filedata.cFileName
+	      call crt_strlen
+	      add esp,4
+	      add [ebp-12], eax
+
+	      ;; bufferlen += 3
+	      mov eax, 3
+	      add [ebp-12], eax
+
+	      ;; buffer = malloc(8 * (bufferlen + (4 - (bufferlen % 4))))
+	      mov edx, 0
+	      mov eax, [ebp-12]
+	      mov ebx, 4
+	      div ebx
+	      mov eax, 4
+	      sub eax, edx
+	      add eax, [ebp-12]
+	      sub esp, eax
+
+	      mov [ebp-16], ebp
+	      sub [ebp-16], eax
+	      mov eax, 16
+	      sub [ebp-16], eax
+
+	      ;; strncpy(buffer, path, pathlen-1)
+	      mov eax, [ebp-8]
+	      sub eax, 1
+	      push eax
+	      push dword ptr[ebp+8]
+	      push [ebp-16]
+	      call crt_strncpy
+	      add esp,12
+
+	      ;; buffer[pathlen] = \0
+	      mov eax, [ebp-16]
+	      add eax, [ebp-8]
+	      sub eax, 1
+	      mov [eax], DWORD PTR 0
+
+	      ;; strcat(buffer, filedata.cFileName)
+	      push offset filedata.cFileName
+	      push [ebp-16]
+	      call crt_strcat
+	      add esp,8
+
+	      ;; strcat(buffer, formatpath)
+	      push offset formatpath
+	      push [ebp-16]
+	      call crt_strcat
+	      add esp,8
+
+	      ;; depth++
+	      inc depth
+
+	      ;; dir(buffer)
+	      push [ebp-16]
+	      call dir
+	      add esp,4
+
+	      ;; depth--
+	      dec depth
+
+	      ;; free(buffer)
+	      mov edx, 0
+	      mov eax, [ebp-12]
+	      mov ebx, 4
+	      div ebx
+	      mov eax, 4
+	      sub eax, edx
+	      add eax, [ebp-12]
+	      add esp, eax
+      continuewhile:
+
+	      ;; {...} while (FindNextFile(findhandle, filedata) != 0)
+	      push offset filedata
+	      push [ebp-4]
+	      call FindNextFile
+	      cmp eax, 0
+	      jne whilethereisanextfile
+
+	      ;; displasterror(findhandle)
+	      push dword ptr [ebp-4]
+	      call displasterror
+	      add esp,4
+
+      enddir:
+	      mov esp, ebp
+	      pop ebp
+	      ret
+      dir ENDP
     #+END_SRC
 ** entrypoint
 *** pseudo code
     #+BEGIN_SRC text
-    
+      void entrypoint()
+	       printf(welcome)
+	       scanf(getpath, path)
+	       if( isavalidsearch(path) )
+	       dir(path)
+	       return 0
     #+END_SRC
 *** transcriptions des variables
 
@@ -147,10 +565,37 @@
 
 *** Implémentation
     #+BEGIN_SRC asm
-    
-    #+END_SRC
+      start:
+      ;;; void entrypoint()
 
-* Utilisation du programme
-  #+BEGIN_SRC shell
-  
-  #+END_SRC
+	      ;; printf(welcome)
+	      push offset welcome
+	      call crt_printf
+	      add esp,4
+
+	      ;; scanf(getpath, path)
+	      push offset path
+	      push offset getpath
+	      call crt_scanf
+	      add esp, 8
+
+	      ;; if( isavalidsearch(path) )
+	      push offset path
+	      call isavalidsearch
+	      add esp, 4
+	      cmp eax, 0
+	      je isnotavalidpath
+
+	      ;; dir(path)
+	      push offset path
+	      call dir
+	      add esp, 4
+
+      isnotavalidpath:
+
+	      ;; Ending the program nicely
+	      invoke crt_system, offset endCommand
+	      mov eax, 0
+	      invoke	ExitProcess,eax
+      end start
+    #+END_SRC

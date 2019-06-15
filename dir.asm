@@ -26,7 +26,6 @@ accessdenied	db	"Access Denied !",10,0
 endCommand	db	"Pause",13,10,0
 depthprint	db	"  | ",0
 depth		dword	0
-debug		db	"%d",10,0
 getpath		db	"%255s"
 welcome		db	"Please enter a valid path (less than 255 characters and ends with '\*' or '/*').",10,"--> ",0
 	
