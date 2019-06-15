@@ -1,5 +1,10 @@
+#+TITLE: Architecture des ordinateurs - Assembleur 32 bits
+#+AUTHOR: Francisco FREITAS
 
 * Objectif
+  Le but de se projet est de coder en assembleur MASM 32 bits un programme qui émule la commande 'dir' de windows.
+  Le programme est écrit dans le fichier dir.asm et peut être compilé à l'aide de la commande ./make.bat/.
+
 * Bases de la programmation 32 bits
 ** Les types
 ** Variables locales
