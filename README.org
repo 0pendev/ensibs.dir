@@ -4,7 +4,8 @@
 \pagebreak
 * Objectif
   Le but de se projet est de coder en assembleur MASM 32 bits un
-  programme qui émule la commande 'dir' de windows.
+  programme qui émule la commande 'dir' de windows en reccursif et
+  sans suivre les raccourcis.
 
 
   Le programme est écrit dans le fichier dir.asm et peut être compilé
@@ -57,13 +58,13 @@
    #+END_SRC
 
 ** Appels de procédures
-   On peut briser notre code en une série de procédure. Chacune de ces
-   procédure pourra être appellé à l'aide de l'instruction CALL. Cette
-   instruction empile l'adresse de retour dans la pile et et effectue
-   un branchement vers la première instruction de la procédure
-   désignée. Cette dernière retourne point d'appel avec l'instruction
-   ret qui dépile l'adresse de retour et effectue un branchement vers
-   cette dernière.
+   On peut briser notre code en une série de procédures. Chacune de
+   ces procédures pourra être appellé à l'aide de l'instruction
+   CALL. Cette instruction empile l'adresse de retour dans la pile et
+   effectue un branchement vers la première instruction de la
+   procédure désignée. Cette dernière retourne au point d'appel avec
+   l'instruction ret qui dépile l'adresse de retour et effectue un
+   branchement vers cette dernière.
 
    
    Une procédure et son appel prennent la structure suivante :
@@ -178,6 +179,9 @@
    #+END_SRC
 \pagebreak
 * canbeexplored
+  Cette fonction vérifie si le dossier en cours de traitement peut
+  être exploré récursivement. Cela revient à vérifier qu'il ne s'agit
+  ni de '.' ou de '..'.
 ** pseudo code
    On donne ci-dessous le pseudo-code correspondant à la fonction
    canbeexplored :
@@ -249,6 +253,8 @@
    #+END_SRC
 \pagebreak
 * isavalidsearch
+  Vérifie si le path rentré par l'utilisateur est bien au format
+  attendu, c'est à dire qu'il fini par '\*' ou '/*'.
 ** pseudo code
    On donne ci-dessous le pseudo-code de la fonction isavalidsearch :
    \newline
@@ -326,6 +332,10 @@
    #+END_SRC
 \pagebreak
 * displasterror
+  Il s'agit d'une fonction surtout utilisé pour du debugging
+  rapide. Elle affiche le dernier code d'erreur. S'il s'agit du code
+  indiquant la fin du répertoire elle ne fait rien. S'il s'agit du
+  code de refus d'accès elle affiche un message particulier.
 ** pseudo code
    On donne ci-dessous le pseudo-code de la fonction displasterror :
    \newline
@@ -389,6 +399,8 @@
 
 \pagebreak
 * printdepth
+  Affiche un certain nombre de fois des espaces pour donner l'effet de
+  profondeur à l'affichage.
 ** pseudo code
    On donne ci-dessous le pseudo-code de la fonction printdepth :
    \newline
@@ -440,6 +452,9 @@
    #+END_SRC
 \pagebreak
 * dir
+  Fonction reccursive qui parcours tous les fichiers d'un répertoire
+  et affiche leur nom. Elle se rappelle récurisvement à chaque
+  sous-répertoire.
 ** pseudo code
    On donne ci-dessous le pseudo-code de la fonction dir :
    \newline
@@ -660,6 +675,8 @@
 
 \pagebreak
 * entrypoint
+  Il s'agit du point d'entré du programme. Il permet de prendre le
+  répertoire à parcourir dans une variable.
 ** pseudo code
    On donne ci-dessous le code pseudo-code du point d'entrée de
    notre programme :
